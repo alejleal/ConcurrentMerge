@@ -1,7 +1,9 @@
 from multiprocessing import BoundedSemaphore, Process, Lock, Value, Array, Semaphore
 from random import randint
 
-NPROD = 20
+from sympy import false
+
+NPROD = 10
 MAXPROD = 200
 
 def producer(pid, buffer, empty, non_empty, mutex):
@@ -16,27 +18,36 @@ def producer(pid, buffer, empty, non_empty, mutex):
 
         non_empty[pid].release()
 
-    # empty[pid].acquire()
-    # mutex.acquire()            
+    empty[pid].acquire()
+    mutex.acquire()            
     buffer[pid] = -1
-    # mutex.release()
-    # non_empty[pid].release      
+    mutex.release()
+    non_empty[pid].release()    
 
 
 def merger(buffer, empty, non_empty, mutex, sorted_list):
     for s in non_empty:
         s.acquire()
+    
+    # running = [True]*NPROD
 
-    while True:
+    min_index = mindex(buffer)
+    fin = min_index == -1
+
+    while not fin:
         mutex.acquire()
-        min_index = mindex(buffer)
-        if min_index == -1:
-            break
         sorted_list.append(buffer[min_index])
         mutex.release()
 
         empty[min_index].release()
         non_empty[min_index].acquire()
+
+        mutex.acquire()
+        # if buffer[min_index] == -1:
+            # running[min_index] = False
+        min_index = mindex(buffer)
+        fin = min_index == -1
+        mutex.release()
 
     print(sorted_list[:-1], len(sorted_list))
 
@@ -65,7 +76,6 @@ def mindex(buffer):
     return min_index
 
 def main():
-    lp = []
     buffer = Array('i', [0]*NPROD)
     empty = []
     non_empty = []
@@ -77,8 +87,7 @@ def main():
 
     sorted_list = []
 
-    for pid in range(NPROD):
-        lp.append(Process(target=producer, args=(pid, buffer, empty, non_empty, mutex)))
+    lp = [Process(target=producer, args=(pid, buffer, empty, non_empty, mutex)) for pid in range(NPROD)]
     lp.append(Process(target=merger, args=(buffer, empty, non_empty, mutex, sorted_list)))
 
     for p in lp:
