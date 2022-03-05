@@ -9,8 +9,8 @@ numeros de sitio cada vez que se consume uno de ellos.
 """
 
 CAP = 7
-NPROD = 10
-MAXPROD = 300
+NPROD = 5
+MAXPROD = 30
 
 def producer(pid, buffer, empty, non_empty):
     last = 0
@@ -18,8 +18,10 @@ def producer(pid, buffer, empty, non_empty):
     for _ in range(MAXPROD):
         empty[pid].acquire()
         
+        print(f"Produciendo {pid}")
         last += randint(0, 5)
         buffer[lastSaved + pid*CAP] = last
+        print(f"Producido {pid} - {buffer[lastSaved + pid*CAP]}")
 
         lastSaved = (lastSaved + 1) % CAP
 
@@ -28,10 +30,13 @@ def producer(pid, buffer, empty, non_empty):
     # Cuando acaba de producir todo, va rellenando con -1
     for _ in range(CAP):
         empty[pid].acquire()
+        
         buffer[lastSaved + pid*CAP] = -1
+        lastSaved = (lastSaved + 1) % CAP
+
         non_empty[pid].release()
 
-        lastSaved = (lastSaved + 1) % CAP
+    print(f"Fin productor {pid}")
 
 def merger(buffer, empty, non_empty, sorted_list):
     for s in non_empty:
@@ -42,8 +47,12 @@ def merger(buffer, empty, non_empty, sorted_list):
     min_index = mindex([buffer[lastConsumed[i] + i*CAP] for i in range(NPROD)])     # Filtra los elementos del buffer tomando los que toquen de cada almacen de cada productor
 
     while max(buffer) > 1:
+        print(f"Consumiendo...")
+
         sorted_list.append(buffer[lastConsumed[min_index] + min_index*CAP])
         lastConsumed[min_index] = (lastConsumed[min_index] + 1) % CAP               # Actualiza la posicion del ultimo consumido
+        
+        print(f"Consumido de prod. {min_index}")
 
         empty[min_index].release()
         non_empty[min_index].acquire()

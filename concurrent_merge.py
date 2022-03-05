@@ -1,16 +1,18 @@
-from multiprocessing import BoundedSemaphore, Process, Lock, Array, Semaphore
+from multiprocessing import BoundedSemaphore, Process, Array, Semaphore
 from random import randint
 
 NPROD = 10
-MAXPROD = 200
+MAXPROD = 50
 
 def producer(pid, buffer, empty, non_empty):
     last = 0
     for _ in range(MAXPROD):
         empty[pid].acquire()
         
+        print(f"Produciendo {pid}")
         last += randint(0, 5)
         buffer[pid] = last
+        print(f"Producido {pid} - {buffer[pid]}")
 
         non_empty[pid].release()
 
@@ -18,22 +20,25 @@ def producer(pid, buffer, empty, non_empty):
     buffer[pid] = -1
     non_empty[pid].release()    
 
+    print(f"Fin productor {pid}")
 
 def merger(buffer, empty, non_empty, sorted_list):
     for s in non_empty:
         s.acquire()                                 # Espera al principio a que todos produzcan
     
     min_index = mindex(buffer)
-    # fin = min_index == -1
 
-    while max(buffer) > -1:                        # Como los numeros generados son positivos, si el maximo es -1 entonces significa que todos han acabado
+    while max(buffer) > -1:                         # Como los numeros generados son positivos, si el maximo es -1 entonces significa que todos han acabado
+        print(f"Consumiendo...")
+
         sorted_list.append(buffer[min_index])
+
+        print(f"Consumido de prod. {min_index}")
 
         empty[min_index].release()
         non_empty[min_index].acquire()
 
         min_index = mindex(buffer)
-        # fin = min_index == -1                       # Comprueba si todos han terminado
 
     print(sorted_list, len(sorted_list))
 
@@ -62,8 +67,6 @@ def main():
 
     for p in lp:
         p.join()
-
-    print(sorted_list)
 
 if __name__ == "__main__":
     main()
